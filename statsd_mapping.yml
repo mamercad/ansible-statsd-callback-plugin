@@ -13,7 +13,7 @@ mappings:
     labels:
       project: "$1"
       playbook: "$2"
-      playbook: "$3"
+      revision: "$3"
       host: "$4"
       task: "$5"
       changed: "$6"
