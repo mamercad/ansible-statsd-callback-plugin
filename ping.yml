@@ -6,3 +6,4 @@
 
   tasks:
     - action: ping
+    - fail:
