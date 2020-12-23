@@ -6,4 +6,7 @@
 
   tasks:
     - action: ping
+    - name: Hello World
+      debug:
+        msg: "Hello, World!"
     - fail:
