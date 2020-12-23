@@ -119,7 +119,10 @@ class CallbackModule(CallbackBase):
     def __init__(self, *args, **kwargs):
         super(CallbackModule, self).__init__()
         logging.basicConfig(level=logging.DEBUG)
-        self.statsd = StatsD(project="foo", playbook="bar", revision="deadbeef")
+        project = os.getenv("STATSD_PROJECT", default="foo")
+        playbook = os.getenv("STATSD_PLAYBOOK", default="bar")
+        revision = os.getenv("STATSD_REVISION", default="deadbeef")
+        self.statsd = StatsD(project=project, playbook=playbook, revision=revision)
 
     def v2_playbook_on_start(self, playbook):
         self._display.display(
