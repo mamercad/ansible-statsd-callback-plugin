@@ -4,9 +4,9 @@ mappings:
     labels:
       project: "$1"
       playbook: "$2"
-      basedir: "$1"
-      filename: "$2"
-      entries: "$3"
+      basedir: "$3"
+      filename: "$4"
+      entries: "$5"
   - match: "ansible.runner_ok.*.*.*.*.*"
     name: "ansible_runner_ok"
     labels:
