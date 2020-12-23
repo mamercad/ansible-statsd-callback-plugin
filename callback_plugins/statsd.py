@@ -60,7 +60,7 @@ class StatsD():
             sock.sendto(metric.encode(), (self.STATSD_HOST, self.STATSD_PORT))
             logging.debug(f"Sent metric {metric} to StatD")
         except Exception as e:
-            logging.critical(f"Failed to sent metric {metric} to StatD")
+            logging.critical(f"Failed to sent metric {metric} to StatD: {e}")
 
     def emit_playbook_start(self, playbook):
         metric = "ansible.playbook_start.{}.{}.{}.{}.{}:1|c".format(
