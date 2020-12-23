@@ -44,7 +44,6 @@ DOCUMENTATION = '''
     '''
 
 
-
 class StatsD():
 
     STATSD_HOST = '127.0.0.1'
@@ -93,8 +92,7 @@ class StatsD():
         self.ship_it(metric)
 
     def emit_playbook_stats(self, stats):
-       pprint(stats)
-       for k1 in stats.keys():
+        for k1 in stats.keys():
             if len(stats[k1]):
                 for k2 in stats[k1].keys():
                     metric = "ansible.playbook_stats.{}.{}.{}.{}:1|c".format(
@@ -118,7 +116,8 @@ class CallbackModule(CallbackBase):
         self.statsd = StatsD(project="foo", playbook="bar")
 
     def v2_playbook_on_start(self, playbook):
-        self._display.display("*** v2_playbook_on_start ***", color=C.COLOR_DEBUG)
+        self._display.display(
+            "*** v2_playbook_on_start ***", color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_start(playbook.__dict__)
 
     # def v2_playbook_on_play_start(self, play):
@@ -134,21 +133,15 @@ class CallbackModule(CallbackBase):
     #     # print('\nExtra vars that were passed to playbook are accessible to the callback plugin by calling the variable_manager on the play object for the method v2_playbook_on_play_start:\nextra_vars: {0}'.format(self.extra_vars))
 
     def v2_runner_on_ok(self, result):
-        self.result = result
         self._display.display("*** v2_runner_on_ok ***", color=C.COLOR_DEBUG)
         self.statsd.emit_runner_ok(result.__dict__)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
-        self.result = result
-        self._display.display("*** v2_runner_on_failed ***", color=C.COLOR_DEBUG)
+        self._display.display(
+            "*** v2_runner_on_failed ***", color=C.COLOR_DEBUG)
         self.statsd.emit_runner_failed(result.__dict__)
 
     def v2_playbook_on_stats(self, stats):
-        self._display.display("*** v2_playbook_on_stats ***", color=C.COLOR_DEBUG)
+        self._display.display(
+            "*** v2_playbook_on_stats ***", color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_stats(stats.__dict__)
-
-        # pprint(dir(stats))
-    #     # hosts = sorted(stats.processed.keys())
-    #     # pprint(stats.__dict__)
-    #     # for host in hosts:
-    #     #     pprint(stats.summarize(host))
