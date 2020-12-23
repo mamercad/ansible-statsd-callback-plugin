@@ -53,6 +53,7 @@ class StatsD():
     def __init__(self, *args, **kwargs):
         self.project = kwargs.get('project')
         self.playbook = kwargs.get('playbook')
+        self.revision = kwargs.get('revision')
 
     def ship_it(self, metric):
         try:
@@ -63,9 +64,10 @@ class StatsD():
             logging.critical(f"Failed to sent metric {metric} to StatD: {e}")
 
     def emit_playbook_start(self, playbook):
-        metric = "ansible.playbook_start.{}.{}.{}.{}.{}:1|c".format(
+        metric = "ansible.playbook_start.{}.{}.{}.{}.{}.{}:1|c".format(
             self.project,
             self.playbook,
+            self.revision,
             playbook['_basedir'].replace(".", "_").replace("/", "_"),
             playbook['_file_name'].replace(".", "_"),
             "/".join(map(str, playbook['_entries'])),
@@ -73,9 +75,10 @@ class StatsD():
         self.ship_it(metric)
 
     def emit_runner_ok(self, result):
-        metric = "ansible.runner_ok.{}.{}.{}.{}.{}:1|c".format(
+        metric = "ansible.runner_ok.{}.{}.{}.{}.{}.{}:1|c".format(
             self.project,
             self.playbook,
+            self.revision,
             result['_host'],
             str(result['_task']).replace("TASK: ", ""),
             result['_result']['changed'],
@@ -83,9 +86,10 @@ class StatsD():
         self.ship_it(metric)
 
     def emit_runner_failed(self, result):
-        metric = "ansible.runner_failed.{}.{}.{}.{}.{}:1|c".format(
+        metric = "ansible.runner_failed.{}.{}.{}.{}.{}.{}:1|c".format(
             self.project,
             self.playbook,
+            self.revision,
             result['_host'],
             str(result['_task']).replace("TASK: ", ""),
             result['_result']['changed'],
@@ -96,9 +100,10 @@ class StatsD():
         for k1 in stats.keys():
             if len(stats[k1]):
                 for k2 in stats[k1].keys():
-                    metric = "ansible.playbook_stats.{}.{}.{}.{}:1|c".format(
+                    metric = "ansible.playbook_stats.{}.{}.{}.{}.{}:1|c".format(
                         self.project,
                         self.playbook,
+                        self.revision,
                         k1,
                         k2,
                     )
@@ -114,7 +119,7 @@ class CallbackModule(CallbackBase):
     def __init__(self, *args, **kwargs):
         super(CallbackModule, self).__init__()
         logging.basicConfig(level=logging.DEBUG)
-        self.statsd = StatsD(project="foo", playbook="bar")
+        self.statsd = StatsD(project="foo", playbook="bar", revision="deadbeef")
 
     def v2_playbook_on_start(self, playbook):
         self._display.display(
