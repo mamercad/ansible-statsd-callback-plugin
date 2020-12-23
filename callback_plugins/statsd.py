@@ -22,6 +22,7 @@ __metaclass__ = type
 from pprint import pprint
 # from requests.auth import HTTPBasicAuth
 import logging
+import os
 import socket
 
 from ansible.plugins.callback import CallbackBase
@@ -46,8 +47,8 @@ DOCUMENTATION = '''
 
 class StatsD():
 
-    STATSD_HOST = '127.0.0.1'
-    STATSD_PORT = 9125
+    STATSD_HOST = os.getenv('STATSD_HOST', default='127.0.0.1')
+    STATSD_PORT = os.getenv('STATSD_PORT', default=9125)
 
     def __init__(self, *args, **kwargs):
         self.project = kwargs.get('project')
@@ -59,7 +60,7 @@ class StatsD():
             sock.sendto(metric.encode(), (self.STATSD_HOST, self.STATSD_PORT))
             logging.debug(f"Sent metric {metric} to StatD")
         except Exception as e:
-            print(e)
+            logging.critical(f"Failed to sent metric {metric} to StatD")
 
     def emit_playbook_start(self, playbook):
         metric = "ansible.playbook_start.{}.{}.{}.{}.{}:1|c".format(
