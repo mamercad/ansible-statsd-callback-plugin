@@ -1,0 +1,32 @@
+mappings:
+  - match: "ansible.playbook_start.*.*.*.*.*"
+    name: "ansible_playbook_start"
+    labels:
+      project: "$1"
+      playbook: "$2"
+      basedir: "$1"
+      filename: "$2"
+      entries: "$3"
+  - match: "ansible.runner_ok.*.*.*.*.*"
+    name: "ansible_runner_ok"
+    labels:
+      project: "$1"
+      playbook: "$2"
+      host: "$3"
+      task: "$4"
+      changed: "$5"
+  - match: "ansible.runner_failed.*.*.*.*.*"
+    name: "ansible_runner_failed"
+    labels:
+      project: "$1"
+      playbook: "$2"
+      host: "$3"
+      task: "$4"
+      changed: "$5"
+  - match: "ansible.playbook_stats.*.*.*.*"
+    name: "ansible_playbook_stats"
+    labels:
+      project: "$1"
+      playbook: "$2"
+      state: "$3"
+      host: "$4"
