@@ -11,14 +11,15 @@ statsd:
 
 .PHONY: statsd-exporter
 statsd-exporter:
-	docker run --rm -it -p 9102:9102 -p 9125:9125 -p 9125:9125/udp \
+	docker run --rm -it \
+		-p 9102:9102 -p 9125:9125 -p 9125:9125/udp \
 		-v $(shell pwd)/statsd_mapping.yml:/tmp/statsd_mapping.yml \
 		prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yml
 
 .PHONY: ansible
 ansible:
-	STATSD_HOST=127.0.0.1 \
-	STATSD_PORT=9125 \
+	STATSD_HOST="127.0.0.1" \
+	STATSD_PORT="9125" \
 	STATSD_PROJECT="ansible_statsd_callback_plugin" \
 	STATSD_PLAYBOOK="ping_yml" \
 	STATSD_REVISION="dev" \
