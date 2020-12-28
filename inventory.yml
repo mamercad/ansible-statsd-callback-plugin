@@ -1,6 +1,4 @@
 all:
   hosts:
     localhost:
-      ansible_python_interpreter: /Users/mmercado/.pyenv/shims/python3
-    s2r5node64:
-      ansible_python_interpreter: /usr/bin/python3
+      ansible_connection: local
