@@ -12,9 +12,18 @@ statsd:
 .PHONY: statsd-exporter
 statsd-exporter:
 	docker run --rm -it -p 9102:9102 -p 9125:9125 -p 9125:9125/udp \
-					-v /Users/mmercado/src/github.internal.digitalocean.com/mmercado/ansible-statsd-callback-plugin/statsd_mapping.yml:/tmp/statsd_mapping.yml \
-					prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yml
+		-v $(shell pwd)/statsd_mapping.yml:/tmp/statsd_mapping.yml \
+		prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yml
 
-.PHONY: test
-test:
-	ANSIBLE_PYTHON_INTERPRETER=/Users/mmercado/.pyenv/shims/python3 ansible-playbook -i localhost, -c local ping.yml -v
+.PHONY: ansible
+ansible:
+	STATSD_HOST=127.0.0.1 \
+	STATSD_PORT=9125 \
+	STATSD_PROJECT="ansible_statsd_callback_plugin" \
+	STATSD_PLAYBOOK="ping_yml" \
+	STATSD_REVISION="dev" \
+	ansible-playbook -i inventory.yml ping.yml
+
+.PHONY: query
+query:
+	http localhost:9102/metrics | grep ^ansible

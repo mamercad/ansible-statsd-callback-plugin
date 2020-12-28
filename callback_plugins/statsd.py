@@ -18,9 +18,6 @@
 from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-# import requests
-from pprint import pprint
-# from requests.auth import HTTPBasicAuth
 import logging
 import os
 import socket
@@ -41,27 +38,26 @@ DOCUMENTATION = '''
     description:
       - On ansible runner calls report state and task output to a statsd endpoint.
     requirements:
-      - python socket library
+      - python logging, os and socket libraries
     '''
 
 
 class StatsD():
 
-    STATSD_HOST = os.getenv('STATSD_HOST', default='127.0.0.1')
-    STATSD_PORT = os.getenv('STATSD_PORT', default=9125)
-
     def __init__(self, *args, **kwargs):
-        self.project = kwargs.get('project')
+        self.host     = kwargs.get('host')
+        self.port     = kwargs.get('port')
+        self.project  = kwargs.get('project')
         self.playbook = kwargs.get('playbook')
         self.revision = kwargs.get('revision')
 
     def ship_it(self, metric):
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.sendto(metric.encode(), (self.STATSD_HOST, self.STATSD_PORT))
-            logging.debug(f"Sent metric {metric} to StatD")
+            sock.sendto(metric.encode(), (self.host, self.port))
+            logging.debug(f"Sent metric {metric} to StatsD at {self.host}:{self.port}")
         except Exception as e:
-            logging.critical(f"Failed to sent metric {metric} to StatD: {e}")
+            logging.critical(f"Failed to sent metric {metric} to StatsD at {self.host}:{self.port} ({e})")
 
     def emit_playbook_start(self, playbook):
         metric = "ansible.playbook_start.{}.{}.{}.{}.{}.{}:1|c".format(
@@ -112,21 +108,31 @@ class StatsD():
 
 class CallbackModule(CallbackBase):
 
-    CALLBACK_VERSION = 2.0
-    CALLBACK_TYPE = 'notification'
-    CALLBACK_NAME = 'statsd_callback_plugin'
+    CALLBACK_VERSION = 1.0
+    CALLBACK_TYPE    = "notification"
+    CALLBACK_NAME    = "statsd_callback_plugin"
 
     def __init__(self, *args, **kwargs):
         super(CallbackModule, self).__init__()
-        logging.basicConfig(level=logging.DEBUG)
-        project = os.getenv("STATSD_PROJECT", default="foo")
-        playbook = os.getenv("STATSD_PLAYBOOK", default="bar")
-        revision = os.getenv("STATSD_REVISION", default="deadbeef")
-        self.statsd = StatsD(project=project, playbook=playbook, revision=revision)
+        if self._display.verbosity:
+            logging.basicConfig(level=logging.DEBUG)
+        statsd_host =     os.getenv('STATSD_HOST',     default="127.0.0.1")
+        statsd_port = int(os.getenv('STATSD_PORT',     default=9125))
+        project     =     os.getenv("STATSD_PROJECT")
+        playbook    =     os.getenv("STATSD_PLAYBOOK")
+        revision    =     os.getenv("STATSD_REVISION")
+        if self._display.verbosity:
+            self._display.display(f"*** statsd callback plugin settings ***", color=C.COLOR_DEBUG)
+            self._display.display(f"statsd_host: {statsd_host}", color=C.COLOR_DEBUG)
+            self._display.display(f"statsd_port: {statsd_port}", color=C.COLOR_DEBUG)
+            self._display.display(f"project: {project}", color=C.COLOR_DEBUG)
+            self._display.display(f"playbook: {playbook}", color=C.COLOR_DEBUG)
+            self._display.display(f"revision: {revision}", color=C.COLOR_DEBUG)
+        self.statsd = StatsD(host=statsd_host, port=statsd_port, project=project, playbook=playbook, revision=revision)
 
     def v2_playbook_on_start(self, playbook):
-        self._display.display(
-            "*** v2_playbook_on_start ***", color=C.COLOR_DEBUG)
+        if self._display.verbosity:
+            self._display.display("*** v2_playbook_on_start ***", color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_start(playbook.__dict__)
 
     # def v2_playbook_on_play_start(self, play):
@@ -134,23 +140,23 @@ class CallbackModule(CallbackBase):
     #     print("*** v2_playbook_on_play_start ***")
     #     # pprint(play.__dict__)
     #     self.extra_vars = self.play.get_variable_manager().extra_vars
-    #     print('==== extra_vars ====')
-    #     pprint(self.extra_vars)
+    #     print("*** extra_vars ***")
+    #     print(self.extra_vars)
     #     # self.callback_url = self.extra_vars['callback_url']
     #     # self.username = self.extra_vars['username']
     #     # self.password = self.extra_vars['password']
-    #     # print('\nExtra vars that were passed to playbook are accessible to the callback plugin by calling the variable_manager on the play object for the method v2_playbook_on_play_start:\nextra_vars: {0}'.format(self.extra_vars))
 
     def v2_runner_on_ok(self, result):
-        self._display.display("*** v2_runner_on_ok ***", color=C.COLOR_DEBUG)
+        if self._display.verbosity:
+            self._display.display("*** v2_runner_on_ok ***", color=C.COLOR_DEBUG)
         self.statsd.emit_runner_ok(result.__dict__)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
-        self._display.display(
-            "*** v2_runner_on_failed ***", color=C.COLOR_DEBUG)
+        if self._display.verbosity:
+            self._display.display("*** v2_runner_on_failed ***", color=C.COLOR_DEBUG)
         self.statsd.emit_runner_failed(result.__dict__)
 
     def v2_playbook_on_stats(self, stats):
-        self._display.display(
-            "*** v2_playbook_on_stats ***", color=C.COLOR_DEBUG)
+        if self._display.verbosity:
+            self._display.display("*** v2_playbook_on_stats ***", color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_stats(stats.__dict__)
