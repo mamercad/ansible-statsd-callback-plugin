@@ -47,8 +47,8 @@ class StatsD():
     def __init__(self, *args, **kwargs):
         self.host     = kwargs.get('host')
         self.port     = kwargs.get('port')
-        self.project  = kwargs.get('project')
-        self.playbook = kwargs.get('playbook')
+        self.project  = kwargs.get('project').replace("-", "_")
+        self.playbook = kwargs.get('playbook').replace(".", "_")
         self.revision = kwargs.get('revision')
 
     def ship_it(self, metric):
@@ -116,47 +116,52 @@ class CallbackModule(CallbackBase):
         super(CallbackModule, self).__init__()
         if self._display.verbosity:
             logging.basicConfig(level=logging.DEBUG)
+
         statsd_host =     os.getenv('STATSD_HOST',     default="127.0.0.1")
         statsd_port = int(os.getenv('STATSD_PORT',     default=9125))
         project     =     os.getenv("STATSD_PROJECT")
         playbook    =     os.getenv("STATSD_PLAYBOOK")
         revision    =     os.getenv("STATSD_REVISION")
+
         if self._display.verbosity:
             self._display.display(f"*** statsd callback plugin settings ***", color=C.COLOR_DEBUG)
             self._display.display(f"statsd_host: {statsd_host}", color=C.COLOR_DEBUG)
             self._display.display(f"statsd_port: {statsd_port}", color=C.COLOR_DEBUG)
-            self._display.display(f"project: {project}", color=C.COLOR_DEBUG)
-            self._display.display(f"playbook: {playbook}", color=C.COLOR_DEBUG)
-            self._display.display(f"revision: {revision}", color=C.COLOR_DEBUG)
+            self._display.display(f"project: {project}",         color=C.COLOR_DEBUG)
+            self._display.display(f"playbook: {playbook}",       color=C.COLOR_DEBUG)
+            self._display.display(f"revision: {revision}",       color=C.COLOR_DEBUG)
+
         self.statsd = StatsD(host=statsd_host, port=statsd_port, project=project, playbook=playbook, revision=revision)
 
     def v2_playbook_on_start(self, playbook):
         if self._display.verbosity:
             self._display.display("*** v2_playbook_on_start ***", color=C.COLOR_DEBUG)
+            self._display.display(str(playbook.__dict__), color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_start(playbook.__dict__)
 
-    # def v2_playbook_on_play_start(self, play):
-    #     self.play = play
-    #     print("*** v2_playbook_on_play_start ***")
-    #     # pprint(play.__dict__)
-    #     self.extra_vars = self.play.get_variable_manager().extra_vars
-    #     print("*** extra_vars ***")
-    #     print(self.extra_vars)
-    #     # self.callback_url = self.extra_vars['callback_url']
-    #     # self.username = self.extra_vars['username']
-    #     # self.password = self.extra_vars['password']
+    def v2_playbook_on_play_start(self, play):
+        self.play = play
+        self.extra_vars = self.play.get_variable_manager().extra_vars
+        if self._display.verbosity:
+            self._display.display("*** v2_playbook_on_play_start ***", color=C.COLOR_DEBUG)
+            self._display.display(str(play.__dict__), color=C.COLOR_DEBUG)
+            self._display.display(str(self.extra_vars), color=C.COLOR_DEBUG)
+        # Not emitting any metrics for this yet
 
     def v2_runner_on_ok(self, result):
         if self._display.verbosity:
             self._display.display("*** v2_runner_on_ok ***", color=C.COLOR_DEBUG)
+            self._display.display(str(result.__dict__), color=C.COLOR_DEBUG)
         self.statsd.emit_runner_ok(result.__dict__)
 
     def v2_runner_on_failed(self, result, ignore_errors=False):
         if self._display.verbosity:
             self._display.display("*** v2_runner_on_failed ***", color=C.COLOR_DEBUG)
+            self._display.display(str(result.__dict__), color=C.COLOR_DEBUG)
         self.statsd.emit_runner_failed(result.__dict__)
 
     def v2_playbook_on_stats(self, stats):
         if self._display.verbosity:
             self._display.display("*** v2_playbook_on_stats ***", color=C.COLOR_DEBUG)
+            self._display.display(str(stats.__dict__), color=C.COLOR_DEBUG)
         self.statsd.emit_playbook_stats(stats.__dict__)
