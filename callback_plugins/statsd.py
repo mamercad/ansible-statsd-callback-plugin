@@ -53,34 +53,15 @@ DOCUMENTATION = '''
             description: StatsD UDP metric ingestion port
             env:
                 - name: STATSD_PORT
-        project:
-            name: StatsD Ansible project
-            default: None
-            description: StatsD Ansible project to associate metrics with
-            env:
-                - name: STATSD_PROJECT
-        playbook:
-            name: StatsD Ansible playbook
-            default: None
-            description: StatsD Ansible playbook to associate metrics with
-            env:
-                - name: STATSD_PLAYBOOK
-        revision:
-            name: StatsD Ansible project revision
-            default: None
-            description: StatsD Ansible project revision to associate metrics with
-            env:
-                - name: STATSD_REVISION
-    '''
+   '''
 
 class StatsD():
 
     def __init__(self, *args, **kwargs):
-        self.host     = kwargs.get('host')
-        self.port     = kwargs.get('port')
-        self.project  = kwargs.get('project').replace("-", "_")
-        self.playbook = kwargs.get('playbook').replace(".", "_")
-        self.revision = kwargs.get('revision')
+        self.host = kwargs.get('host')
+        self.port = kwargs.get('port')
+        self.basedir  = None
+        self.playbook = None
 
     def ship_it(self, metric):
         """ Sends the metric to StatsD """
@@ -93,22 +74,21 @@ class StatsD():
 
     def emit_playbook_start(self, playbook):
         """ Constructs the StatsD metric for sending """
-        metric = "ansible.playbook_start.{}.{}.{}.{}.{}.{}:1|c".format(
-            self.project,
+        # self.basedir  = playbook['_basedir'].replace(".", "_").replace("/", "_")
+        self.basedir  = playbook['_basedir'].split(os.path.sep)[-1]
+        self.playbook = playbook['_file_name'].split('.')[0]
+        metric = "ansible.playbook_start.{}.{}.{}:1|c".format(
+            self.basedir,
             self.playbook,
-            self.revision,
-            playbook['_basedir'].replace(".", "_").replace("/", "_"),
-            playbook['_file_name'].replace(".", "_"),
             "/".join(map(str, playbook['_entries'])),
         )
         self.ship_it(metric)
 
     def emit_runner_ok(self, result):
         """ Constructs the StatsD metric for sending """
-        metric = "ansible.runner_ok.{}.{}.{}.{}.{}.{}:1|c".format(
-            self.project,
+        metric = "ansible.runner_ok.{}.{}.{}.{}.{}:1|c".format(
+            self.basedir,
             self.playbook,
-            self.revision,
             result['_host'],
             str(result['_task']).replace("TASK: ", ""),
             result['_result']['changed'],
@@ -117,10 +97,9 @@ class StatsD():
 
     def emit_runner_failed(self, result):
         """ Constructs the StatsD metric for sending """
-        metric = "ansible.runner_failed.{}.{}.{}.{}.{}.{}:1|c".format(
-            self.project,
+        metric = "ansible.runner_failed.{}.{}.{}.{}.{}:1|c".format(
+            self.basedir,
             self.playbook,
-            self.revision,
             result['_host'],
             str(result['_task']).replace("TASK: ", ""),
             result['_result']['changed'],
@@ -132,10 +111,9 @@ class StatsD():
         for k1 in stats.keys():
             if len(stats[k1]):
                 for k2 in stats[k1].keys():
-                    metric = "ansible.playbook_stats.{}.{}.{}.{}.{}:1|c".format(
-                        self.project,
+                    metric = "ansible.playbook_stats.{}.{}.{}.{}:1|c".format(
+                        self.basedir,
                         self.playbook,
-                        self.revision,
                         k1,
                         k2,
                     )
@@ -155,41 +133,35 @@ class CallbackModule(CallbackBase):
     An example StatsD mapping manifest (for the Prometheus Exporter):
 
         mappings:
-            - match: "ansible.playbook_start.*.*.*.*.*.*"
+            - match: "ansible.playbook_start.*.*.*"
                 name: "ansible_playbook_start"
                 labels:
-                project: "$1"
+                basedir: "$1"
                 playbook: "$2"
-                revision: "$3"
-                basedir: "$4"
-                filename: "$5"
-                entries: "$6"
-            - match: "ansible.runner_ok.*.*.*.*.*.*"
+                entries: "$3"
+            - match: "ansible.runner_ok.*.*.*.*.*"
                 name: "ansible_runner_ok"
                 labels:
-                project: "$1"
+                basedir: "$1"
                 playbook: "$2"
-                revision: "$3"
-                host: "$4"
-                task: "$5"
-                changed: "$6"
-            - match: "ansible.runner_failed.*.*.*.*.*.*"
+                host: "$3"
+                task: "$4"
+                changed: "$5"
+            - match: "ansible.runner_failed.*.*.*.*.*"
                 name: "ansible_runner_failed"
                 labels:
-                project: "$1"
+                basedir: "$1"
                 playbook: "$2"
-                revision: "$3"
-                host: "$4"
-                task: "$5"
-                changed: "$6"
-            - match: "ansible.playbook_stats.*.*.*.*.*"
+                host: "$3"
+                task: "$4"
+                changed: "$5"
+            - match: "ansible.playbook_stats.*.*.*.*"
                 name: "ansible_playbook_stats"
                 labels:
-                project: "$1"
+                basedir: "$1"
                 playbook: "$2"
-                revision: "$3"
-                state: "$4"
-                host: "$5"
+                state: "$3"
+                host: "$4"
 
     This plugin will have to be whitelisted in ansible.cfg.
 
@@ -200,22 +172,19 @@ class CallbackModule(CallbackBase):
 
         $ STATSD_HOST=127.0.0.1 \
         STATSD_PORT=9125 \
-        STATSD_PROJECT="ansible-statsd-callback-plugin" \
-        STATSD_PLAYBOOK="ping.yml" \
-        STATSD_REVISION="dev" \
         ansible-playbook -i inventory.yml ping.yml
 
     We'll end up with Prometheus metrics which look like this:
 
-        $ http localhost:9102/metrics | grep ^ansible
-        ansible_playbook_start{basedir="_Users_mmercado_src_github_internal_digitalocean_com_mmercado_ansible-statsd-callback-plugin",entries="all",filename="ping_yml",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev"} 1
-        ansible_playbook_stats{host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",state="failures"} 1
-        ansible_playbook_stats{host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",state="ok"} 1
-        ansible_playbook_stats{host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",state="processed"} 1
-        ansible_runner_failed{changed="False",host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",task="fail"} 1
-        ansible_runner_ok{changed="False",host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",task="Hello World"} 1
-        ansible_runner_ok{changed="False",host="localhost",playbook="ping_yml",project="ansible_statsd_callback_plugin",revision="dev",task="ping"} 1
-    """
+        ❯ http localhost:9102/metrics | grep ^ansible
+        ansible_playbook_start{basedir="ansible-statsd-callback-plugin",entries="all",playbook="ping"} 1
+        ansible_playbook_stats{basedir="ansible-statsd-callback-plugin",host="localhost",playbook="ping",state="failures"} 1
+        ansible_playbook_stats{basedir="ansible-statsd-callback-plugin",host="localhost",playbook="ping",state="ok"} 1
+        ansible_playbook_stats{basedir="ansible-statsd-callback-plugin",host="localhost",playbook="ping",state="processed"} 1
+        ansible_runner_failed{basedir="ansible-statsd-callback-plugin",changed="False",host="localhost",playbook="ping",task="fail"} 1
+        ansible_runner_ok{basedir="ansible-statsd-callback-plugin",changed="False",host="localhost",playbook="ping",task="Hello World"} 1
+        ansible_runner_ok{basedir="ansible-statsd-callback-plugin",changed="False",host="localhost",playbook="ping",task="ping"} 1
+   """
 
     CALLBACK_VERSION = 2.0
     CALLBACK_TYPE    = "notification"
@@ -228,19 +197,13 @@ class CallbackModule(CallbackBase):
 
         statsd_host =     os.getenv('STATSD_HOST',     default="127.0.0.1")
         statsd_port = int(os.getenv('STATSD_PORT',     default=9125))
-        project     =     os.getenv("STATSD_PROJECT")
-        playbook    =     os.getenv("STATSD_PLAYBOOK")
-        revision    =     os.getenv("STATSD_REVISION")
 
         if self._display.verbosity:
             self._display.display(f"*** statsd callback plugin settings ***", color=C.COLOR_DEBUG)
             self._display.display(f"statsd_host: {statsd_host}", color=C.COLOR_DEBUG)
             self._display.display(f"statsd_port: {statsd_port}", color=C.COLOR_DEBUG)
-            self._display.display(f"project: {project}",         color=C.COLOR_DEBUG)
-            self._display.display(f"playbook: {playbook}",       color=C.COLOR_DEBUG)
-            self._display.display(f"revision: {revision}",       color=C.COLOR_DEBUG)
 
-        self.statsd = StatsD(host=statsd_host, port=statsd_port, project=project, playbook=playbook, revision=revision)
+        self.statsd = StatsD(host=statsd_host, port=statsd_port)
 
     def v2_playbook_on_start(self, playbook):
         if self._display.verbosity:

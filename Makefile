@@ -20,9 +20,6 @@ statsd-exporter:
 ansible:
 	STATSD_HOST="127.0.0.1" \
 	STATSD_PORT="9125" \
-	STATSD_PROJECT="ansible_statsd_callback_plugin" \
-	STATSD_PLAYBOOK="ping_yml" \
-	STATSD_REVISION="dev" \
 	ansible-playbook -i inventory.yml ping.yml
 
 .PHONY: query
