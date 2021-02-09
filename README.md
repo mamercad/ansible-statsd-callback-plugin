@@ -7,7 +7,7 @@ For development/testing, one could experiment in Docker like so:
 ```bash
 $ docker run --rm -it \
 -p 9102:9102 -p 9125:9125 -p 9125:9125/udp \
--v $(shell pwd)/statsd_mapping.yml:/tmp/statsd_mapping.yml \
+-v $(pwd)/statsd_mapping.yml:/tmp/statsd_mapping.yml \
 prom/statsd-exporter --statsd.mapping-config=/tmp/statsd_mapping.yml
 ```
 
