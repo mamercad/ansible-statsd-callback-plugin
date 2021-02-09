@@ -58,7 +58,7 @@ For example, after running Ansible like this:
 ```bash
 ❯ STATSD_HOST=127.0.0.1 \
 STATSD_PORT=9125 \
-ansible-playbook -i inventory.yml ping.ym
+ansible-playbook -i inventory.yml ping.yml
 ```
 
 We'll end up with Prometheus metrics which look like this:
