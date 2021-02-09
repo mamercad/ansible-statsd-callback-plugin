@@ -133,35 +133,35 @@ class CallbackModule(CallbackBase):
     An example StatsD mapping manifest (for the Prometheus Exporter):
 
         mappings:
-            - match: "ansible.playbook_start.*.*.*"
-                name: "ansible_playbook_start"
-                labels:
-                basedir: "$1"
-                playbook: "$2"
-                entries: "$3"
-            - match: "ansible.runner_ok.*.*.*.*.*"
-                name: "ansible_runner_ok"
-                labels:
-                basedir: "$1"
-                playbook: "$2"
-                host: "$3"
-                task: "$4"
-                changed: "$5"
-            - match: "ansible.runner_failed.*.*.*.*.*"
-                name: "ansible_runner_failed"
-                labels:
-                basedir: "$1"
-                playbook: "$2"
-                host: "$3"
-                task: "$4"
-                changed: "$5"
-            - match: "ansible.playbook_stats.*.*.*.*"
-                name: "ansible_playbook_stats"
-                labels:
-                basedir: "$1"
-                playbook: "$2"
-                state: "$3"
-                host: "$4"
+          - match: "ansible.playbook_start.*.*.*"
+            name: "ansible_playbook_start"
+            labels:
+              basedir: "$1"
+              playbook: "$2"
+              entries: "$3"
+          - match: "ansible.runner_ok.*.*.*.*.*"
+            name: "ansible_runner_ok"
+            labels:
+              basedir: "$1"
+              playbook: "$2"
+              host: "$3"
+              task: "$4"
+              changed: "$5"
+          - match: "ansible.runner_failed.*.*.*.*.*"
+            name: "ansible_runner_failed"
+            labels:
+              basedir: "$1"
+              playbook: "$2"
+              host: "$3"
+              task: "$4"
+              changed: "$5"
+          - match: "ansible.playbook_stats.*.*.*.*"
+            name: "ansible_playbook_stats"
+            labels:
+              basedir: "$1"
+              playbook: "$2"
+              state: "$3"
+              host: "$4"
 
     This plugin will have to be whitelisted in ansible.cfg.
 
@@ -170,7 +170,7 @@ class CallbackModule(CallbackBase):
 
     For example, after running Ansible like this:
 
-        $ STATSD_HOST=127.0.0.1 \
+        ❯ STATSD_HOST=127.0.0.1 \
         STATSD_PORT=9125 \
         ansible-playbook -i inventory.yml ping.yml
 
